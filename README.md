@@ -1,2 +1,2 @@
 # dwm-config
-my config for dwm with patches
+My config for dwm with pango and statuscolors support 
