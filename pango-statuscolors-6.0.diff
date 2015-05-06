@@ -1,68 +1,5 @@
-diff --git a/config.def.h b/config.def.h
-index 77ff358..31ad6e0 100644
---- a/config.def.h
-+++ b/config.def.h
-@@ -1,17 +1,27 @@
- /* See LICENSE file for copyright and license details. */
- 
- /* appearance */
--static const char font[]            = "-*-terminus-medium-r-*-*-16-*-*-*-*-*-*-*";
--static const char normbordercolor[] = "#444444";
--static const char normbgcolor[]     = "#222222";
--static const char normfgcolor[]     = "#bbbbbb";
--static const char selbordercolor[]  = "#005577";
--static const char selbgcolor[]      = "#005577";
--static const char selfgcolor[]      = "#eeeeee";
-+static const char font[]            = "Sans 8";
-+static const char dmenu_font[]      = "-*-terminus-medium-*-*-*-28-*-*-*-*-*-*-*";
-+
-+#define NUMCOLORS 9 
-+static const char colors[NUMCOLORS][ColLast][9] = {
-+// border foreground background
-+{ "#212121", "#696969", "#121212" }, // 0 = normal
-+{ "#696969", "#E0E0E0", "#121212" }, // 1 = selected
-+{ "#212121", "#CF4F88", "#121212" }, // 2 = red
-+{ "#212121", "#53A6A6", "#121212" }, // 3 = green
-+{ "#212121", "#914E89", "#121212" }, // 4 = yellow
-+{ "#212121", "#4779B3", "#121212" }, // 5 = blue
-+{ "#212121", "#47959E", "#121212" }, // 6 = cyan
-+{ "#212121", "#7E62B3", "#121212" }, // 7 = magenta
-+{ "#212121", "#899CA1", "#121212" }, // 8 = grey
-+};
- static const unsigned int borderpx  = 1;        /* border pixel of windows */
- static const unsigned int snap      = 32;       /* snap pixel */
- static const Bool showbar           = True;     /* False means no bar */
- static const Bool topbar            = True;     /* False means bottom bar */
-+static const Bool statusmarkup      = True;     /* True means use pango markup in status message */
- 
- /* tagging */
- static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-@@ -46,7 +56,7 @@ static const Layout layouts[] = {
- #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
- 
- /* commands */
--static const char *dmenucmd[] = { "dmenu_run", "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
-+static const char *dmenucmd[] = { "dmenu_run", "-fn", font, "-nb", colors[0][ColBG], "-nf", colors[0][ColFG], "-sb", colors[1][ColBG], "-sf", colors[1][ColFG], NULL };
- static const char *termcmd[]  = { "uxterm", NULL };
- 
- static Key keys[] = {
-diff --git a/config.mk b/config.mk
-index e6e9c68..7cdf3c2 100644
---- a/config.mk
-+++ b/config.mk
-@@ -15,8 +15,8 @@ XINERAMALIBS = -L${X11LIB} -lXinerama
- XINERAMAFLAGS = -DXINERAMA
- 
- # includes and libs
--INCS = -I. -I/usr/include -I${X11INC}
--LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 ${XINERAMALIBS}
-+INCS = -I. -I/usr/include -I${X11INC} `pkg-config --cflags xft pango pangoxft`
-+LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 ${XINERAMALIBS} `pkg-config --libs xft pango pangoxft`
- 
- # flags
- CPPFLAGS += -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
 diff --git a/dwm.c b/dwm.c
-index 1d78655..9536f0a 100644
+index 1d78655..b8fb2be 100644
 --- a/dwm.c
 +++ b/dwm.c
 @@ -36,6 +36,10 @@
@@ -71,7 +8,7 @@ index 1d78655..9536f0a 100644
  #include <X11/Xutil.h>
 +#include <X11/Xft/Xft.h>
 +#include <pango/pango.h>
-+#include <pango/pangoxft.hmin>
++#include <pango/pangoxft.h>
 +#include <pango/pango-font.h>
  #ifdef XINERAMA
  #include <X11/extensions/Xinerama.h>
@@ -222,7 +159,7 @@ index 1d78655..9536f0a 100644
  	}
  	XCopyArea(dpy, dc.drawable, m->barwin, dc.gc, 0, 0, m->ww, bh, 0, 0);
  	XSync(dpy, False);
-@@ -774,29 +788,58 @@ drawbars(void) {
+@@ -774,29 +788,61 @@ drawbars(void) {
  }
  
  void
@@ -238,7 +175,6 @@ index 1d78655..9536f0a 100644
 +            c=*ptr;
 +            *ptr=0;
 +             if( i ) {
-+             	
 +                 dc.w = selmon->ww - dc.x;
 +                 if ((c-1) == 0) dc.y -= 5; // for normal icon rendering
 +                 drawtext(buf, col, first);
@@ -249,9 +185,13 @@ index 1d78655..9536f0a 100644
 +             *ptr = c;
 +             col = c-1;
 +             buf = ++ptr;
-+     }
-+     drawtext(buf, col, True);
-+     dc.x = ox;
++    }
++    dc.y -= 2;
++
++	  drawtext(buf, col, True);   
++    
++    dc.y += 2;
++    dc.x = ox;
 +}
 +
 +void
@@ -271,9 +211,8 @@ index 1d78655..9536f0a 100644
  
  void
 -drawtext(const char *text, unsigned long col[ColLast], Bool invert) {
--	char buf[256];
 +drawtext(const char *text, int color_index, Bool pad) {
-+	char buf[512];
+ 	char buf[256];
  	int i, x, y, h, len, olen;
  
 -	XSetForeground(dpy, dc.gc, col[invert ? ColFG : ColBG]);
@@ -289,7 +228,7 @@ index 1d78655..9536f0a 100644
  	x = dc.x + (h / 2);
  	/* shorten text if necessary */
  	for(len = MIN(olen, sizeof buf); len && textnw(text, len) > dc.w - h; len--);
-@@ -805,11 +848,8 @@ drawtext(const char *text, unsigned long col[ColLast], Bool invert) {
+@@ -805,11 +851,9 @@ drawtext(const char *text, unsigned long col[ColLast], Bool invert) {
  	memcpy(buf, text, len);
  	if(len < olen)
  		for(i = len; i && i > len - 3; buf[--i] = '.');
@@ -298,12 +237,13 @@ index 1d78655..9536f0a 100644
 -		XmbDrawString(dpy, dc.drawable, dc.font.set, dc.gc, x, y, buf, len);
 -	else
 -		XDrawString(dpy, dc.drawable, dc.gc, x, y, buf, len);
++
 +	pango_layout_set_text(dc.plo, text, len);
 +	pango_xft_render_layout(dc.xftdrawable, &dc.xftcolors[color_index][ColFG], dc.plo, x * PANGO_SCALE, y * PANGO_SCALE);
  }
  
  void
-@@ -855,7 +895,8 @@ focus(Client *c) {
+@@ -855,7 +899,8 @@ focus(Client *c) {
  		detachstack(c);
  		attachstack(c);
  		grabbuttons(c, True);
@@ -313,7 +253,7 @@ index 1d78655..9536f0a 100644
  		setfocus(c);
  	}
  	else
-@@ -927,13 +968,13 @@ getatomprop(Client *c, Atom prop) {
+@@ -927,13 +972,13 @@ getatomprop(Client *c, Atom prop) {
  }
  
  unsigned long
@@ -331,9 +271,12 @@ index 1d78655..9536f0a 100644
  }
  
  Bool
-@@ -1034,35 +1075,21 @@ incnmaster(const Arg *arg) {
+@@ -1032,37 +1077,23 @@ incnmaster(const Arg *arg) {
+ 	arrange(selmon);
+ }
  
- void
+-void
++void 
  initfont(const char *fontstr) {
 -	char *def, **missing;
 -	int n;
@@ -381,7 +324,7 @@ index 1d78655..9536f0a 100644
  	dc.font.height = dc.font.ascent + dc.font.descent;
  }
  
-@@ -1144,7 +1171,7 @@ manage(Window w, XWindowAttributes *wa) {
+@@ -1144,7 +1175,7 @@ manage(Window w, XWindowAttributes *wa) {
  
  	wc.border_width = c->bw;
  	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -390,7 +333,22 @@ index 1d78655..9536f0a 100644
  	configure(c); /* propagates border_width, if size doesn't change */
  	updatewindowtype(c);
  	updatesizehints(c);
-@@ -1611,19 +1638,23 @@ setup(void) {
+@@ -1588,12 +1619,12 @@ setup(void) {
+ 	sigchld(0);
+ 
+ 	/* init screen */
++	initfont(font);
+ 	screen = DefaultScreen(dpy);
+ 	root = RootWindow(dpy, screen);
+-	initfont(font);
+ 	sw = DisplayWidth(dpy, screen);
+ 	sh = DisplayHeight(dpy, screen);
+-	bh = dc.h = dc.font.height + 2;
++	bh = dc.h = dc.font.height + 1;
+ 	updategeom();
+ 	/* init atoms */
+ 	wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+@@ -1611,19 +1642,23 @@ setup(void) {
  	cursor[CurNormal] = XCreateFontCursor(dpy, XC_left_ptr);
  	cursor[CurResize] = XCreateFontCursor(dpy, XC_sizing);
  	cursor[CurMove] = XCreateFontCursor(dpy, XC_fleur);
@@ -423,7 +381,7 @@ index 1d78655..9536f0a 100644
  	updatebars();
  	updatestatus();
  	/* EWMH support per view */
-@@ -1692,13 +1723,26 @@ tagmon(const Arg *arg) {
+@@ -1692,13 +1727,26 @@ tagmon(const Arg *arg) {
  
  int
  textnw(const char *text, unsigned int len) {
@@ -456,7 +414,7 @@ index 1d78655..9536f0a 100644
  }
  
  void
-@@ -1776,7 +1820,8 @@ unfocus(Client *c, Bool setfocus) {
+@@ -1776,7 +1824,8 @@ unfocus(Client *c, Bool setfocus) {
  	if(!c)
  		return;
  	grabbuttons(c, False);
