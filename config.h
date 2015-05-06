@@ -1,8 +1,8 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const char font[]            = "Terminus 12";
-static const char dmenu_font[]      = "-*-terminus-medium-*-*-*-28-*-*-*-*-*-*-*";
+static const char font[]            = "Terminus(ttf) 12";
+static const char dmenu_font[]      = "-*-Terminus-medium-*-*-*-28-*-*-*-*-*-*-*";
 #define NUMCOLORS 9 
 static const char colors[NUMCOLORS][ColLast][9] = {
 /* border   foreground  background */
@@ -66,12 +66,13 @@ static const char *volumeupcmd[] = {"amixer", "-c", "1", "set", "Master", "4dB+"
 static const char *volumedowncmd[] = {"amixer", "-c", "1", "set", "Master", "4dB-", NULL};
 static const char *volumemutecmd[] = {"amixer", "-c", "1", "set", "Master", "0", NULL};
 static Key keys[] = {
-	/* modifier                     key        function        argument */
-    { 0,                            0x1008ff02, spawn,          {.v = brightnessupcmd} },
-    { 0,                            0x1008ff03, spawn,          {.v = brightnessdowncmd } },
-    { 0,                            0x1008ff13, spawn,          {.v = volumeupcmd } },
-    { 0,                            0x1008ff11, spawn,          {.v = volumedowncmd } },
-    { 0,                            0x1008ff12, spawn,          {.v = volumemutecmd } },
+	/* modifier                     key        function        argumnt */
+  { 0,                            0x1008ff02, spawn,          {.v = brightnessupcmd} },
+  { 0,                            0x1008ff03, spawn,          {.v = brightnessdowncmd } },
+  { 0,                            0x1008ff13, spawn,          {.v = volumeupcmd } },
+  // { 0,                            0x1008ff13, signalstatus,   {.i = 1 } }, 	signal statusbar to update status for item with number = i 
+  { 0,                            0x1008ff11, spawn,          {.v = volumedowncmd } },
+  { 0,                            0x1008ff12, spawn,          {.v = volumemutecmd } },
 	{ MODKEY,                       XK_p,       spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_Return,  spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_b,       togglebar,      {0} },
